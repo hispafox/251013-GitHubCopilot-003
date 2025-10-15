@@ -11,18 +11,18 @@ Namespace Impostos.Core.Exemples
         ''' </summary>
         Public Shared Sub Exemple1_ConfiguracioPerDefecte()
             Console.WriteLine("=== EXEMPLE 1: Configuració Per Defecte ===")
-            
+
             Dim calculadora As New CalculadoraImpostos()
-            
+
             ' Càlcul amb IVA normal (21%), recàrrec (5%) i descompte pront pagament (2%)
             Dim total As Decimal = calculadora.CalcularTotal(
-                preuUnitat:=100D, 
-                quantitat:=2, 
-                categoria:="normal", 
-                recarrecEquivalencia:=True, 
+                preuUnitat:=100D,
+                quantitat:=2,
+                categoria:="normal",
+                recarrecEquivalencia:=True,
                 prontPagament:=True
             )
-            
+
             ' Resultat esperat:
             ' Base: 200
             ' + IVA 21%: 200 + 42 = 242
@@ -38,16 +38,16 @@ Namespace Impostos.Core.Exemples
         ''' </summary>
         Public Shared Sub Exemple2_ConfiguracioPersonalitzada()
             Console.WriteLine("=== EXEMPLE 2: Configuració Personalitzada amb DI ===")
-            
+
             ' Crear context i afegir regles manualment
             Dim contexte As New ContexteImpost()
             contexte.AfegirRegla(New Regles.ReglaIvaReduit(0.1D))                ' Ordre 10: IVA reduït 10%
             contexte.AfegirRegla(New Regles.ReglaRecarrec(200D, 0.05D))         ' Ordre 20: Recàrrec 5% sobre 200
             contexte.AfegirRegla(New Regles.ReglaDescompteProntPagament(0.02D)) ' Ordre 30: Descompte 2%
-            
+
             Dim calculadoraCustom As New CalculadoraImpostos(contexte)
             Dim totalCustom As Decimal = calculadoraCustom.CalcularAmbContext(200D)
-            
+
             ' Resultat esperat:
             ' Base: 200
             ' + IVA 10%: 200 + 20 = 220
@@ -63,16 +63,16 @@ Namespace Impostos.Core.Exemples
         ''' </summary>
         Public Shared Sub Exemple3_CanviarOrdreRegles()
             Console.WriteLine("=== EXEMPLE 3: Canviar Ordre de Regles ===")
-            
+
             ' Crear regla de descompte amb ordre modificat (abans del recàrrec)
             Dim contexteReordenat As New ContexteImpost()
             contexteReordenat.AfegirRegla(New Regles.ReglaIvaNormal(0.21D))                      ' Ordre 10
             contexteReordenat.AfegirRegla(New ReglaDescompteProntPagamentAntesRecarrec())       ' Ordre 15
             contexteReordenat.AfegirRegla(New Regles.ReglaRecarrec(200D, 0.05D))                ' Ordre 20
-            
+
             Dim calculadoraReordenada As New CalculadoraImpostos(contexteReordenat)
             Dim totalReordenat As Decimal = calculadoraReordenada.CalcularAmbContext(200D)
-            
+
             ' Resultat esperat (ordre diferent):
             ' Base: 200
             ' + IVA 21%: 200 + 42 = 242
@@ -87,17 +87,17 @@ Namespace Impostos.Core.Exemples
         ''' </summary>
         Public Shared Sub Exemple4_DetallReglesAplicades()
             Console.WriteLine("=== EXEMPLE 4: Detall de Regles Aplicades ===")
-            
+
             Dim contexte As New ContexteImpost()
             contexte.AfegirRegla(New Regles.ReglaIvaNormal(0.21D))
             contexte.AfegirRegla(New Regles.ReglaRecarrec(100D, 0.05D))
             contexte.AfegirRegla(New Regles.ReglaDescompteProntPagament(0.02D))
-            
+
             Console.WriteLine("Regles configurades (per ordre d'aplicació):")
             For Each regla In contexte.ReglesActuals.OrderBy(Function(r) r.Ordre)
                 Console.WriteLine($"  - Ordre {regla.Ordre}: {regla.Nom}")
             Next
-            
+
             Dim total As Decimal = contexte.AplicarRegles(100D)
             Console.WriteLine($"Total final: {total:C2}")
             Console.WriteLine()
@@ -111,7 +111,7 @@ Namespace Impostos.Core.Exemples
             Exemple2_ConfiguracioPersonalitzada()
             Exemple3_CanviarOrdreRegles()
             Exemple4_DetallReglesAplicades()
-            
+
             Console.WriteLine("Premeu qualsevol tecla per sortir...")
             Console.ReadKey()
         End Sub
