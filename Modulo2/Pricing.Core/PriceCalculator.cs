@@ -1,47 +1,52 @@
 ﻿namespace Pricing.Core;
 
+using Pricing.Core.Configuration;
+using Pricing.Core.Rules;
+
 public class PriceCalculator
 {
-    // Calcula el precio final con descuentos y IVA
+    private readonly IEnumerable<IPricingRule> _rules;
+    private readonly PricingConfiguration _config;
+
+    public PriceCalculator(IEnumerable<IPricingRule> rules, PricingConfiguration config)
+    {
+        _rules = rules?.OrderBy(r => r.Priority) ?? throw new ArgumentNullException(nameof(rules));
+        _config = config ?? throw new ArgumentNullException(nameof(config));
+    }
+    
+    // Constructor con configuración por defecto (para compatibilidad)
+    public PriceCalculator() : this(CreateDefaultRules(), new PricingConfiguration())
+    {
+    }
+
     public decimal Calculate(decimal unitPrice, int quantity, string? customerType, DateTime purchaseDate)
     {
-        var subtotal = unitPrice * quantity;
-
-        // descuentos por tipo de cliente (hardcoded, poco mantenible)
-        decimal discount = 0m;
-        if (!string.IsNullOrWhiteSpace(customerType))
+        var context = new PricingContext
         {
-            if (customerType.Equals("VIP", StringComparison.OrdinalIgnoreCase))
-                discount += 0.20m; // 20%
-            else if (customerType.Equals("Employee", StringComparison.OrdinalIgnoreCase))
-                discount += 0.30m; // 30%
-        }
+            UnitPrice = unitPrice,
+            Quantity = quantity,
+            CustomerType = customerType,
+            PurchaseDate = purchaseDate
+        };
 
-        // descuento por volumen (if anidado)
-        if (quantity >= 10)
+        // Aplica todas las reglas en orden de prioridad
+        context = _rules.Aggregate(context, (current, rule) => rule.Apply(current));
+
+        return context.FinalPrice;
+    }
+    
+    private static IEnumerable<IPricingRule> CreateDefaultRules()
+    {
+        var config = new PricingConfiguration();
+        return new IPricingRule[]
         {
-            discount += 0.05m;
-        }
-
-        // descuento “Black Friday” en noviembre (magia de fechas)
-        if (purchaseDate.Month == 11)
-        {
-            discount += 0.10m;
-        }
-
-        // límite “silencioso” de descuento total
-        if (discount > 0.50m)
-        {
-            discount = 0.50m;
-        }
-
-        var afterDiscounts = subtotal * (1 - discount);
-
-        // IVA fijo 21%
-        var final = afterDiscounts * 1.21m;
-
-        // redondeo “a ojo”
-        return Math.Round(final, 2, MidpointRounding.AwayFromZero);
+            new SubtotalCalculationRule(),
+            new CustomerTypeDiscountRule(config),
+            new VolumeDiscountRule(config),
+            new SeasonalDiscountRule(config),
+            new MaxDiscountRule(config),
+            new TaxRule(config)
+        };
     }
 }
 
